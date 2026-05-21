@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+
+  # ─── 1. Source: Mock Market Data API ───────────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: alphaplus_api
+    ports:
+      - "8000:8000"
+    networks:
+      - alphaplus_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── 2. Sink: PostgreSQL Database ──────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: alphaplus_db
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - alphaplus_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ─── 3. Pipeline: ETL Service ──────────────────────────────────────────────
+  etl:
+    build:
+      context: ./etl
+      dockerfile: Dockerfile
+    container_name: alphaplus_etl
+    env_file:
+      - .env
+    environment:
+      API_URL:                  "http://api:8000/v1/market-data"
+      DB_HOST:                  db
+    networks:
+      - alphaplus_net
+    depends_on:
+      api:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  alphaplus_net:
+    driver: bridge
+
+volumes:
+  pg_data:
