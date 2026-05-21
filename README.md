@@ -301,26 +301,32 @@ The pipeline prevents duplicate records using the database constraint:
 
 ```sql
 UNIQUE (instrument_id, timestamp)
+```
+
+combined with:
+
+```sql
 ON CONFLICT DO NOTHING
+```
 
 This ensures that even if the same batch is processed multiple times after a failure or retry, duplicate records are not inserted into the database.
 
-Recovery for Large Batches
+#### Recovery for Large Batches
 
 For large datasets, the pipeline could process records in smaller chunks instead of loading everything at once.
 
 A checkpoint table could store:
-
-the last processed chunk,
-processing status,
-and timestamps.
+- the last processed chunk,
+- processing status,
+- and timestamps.
 
 If the pipeline crashes, it can restart from the last successful checkpoint instead of reprocessing the entire batch.
 
-Additional Reliability Improvements
-Database transactions can ensure that partial writes are rolled back if a failure occurs during insertion.
-Invalid records can be stored in a separate quarantine table for later inspection instead of being silently discarded.
-A schema version column can help track future data structure changes safely.
+#### Additional Reliability Improvements
+
+- Database transactions can ensure that partial writes are rolled back if a failure occurs during insertion.
+- Invalid records can be stored in a separate quarantine table for later inspection instead of being silently discarded.
+- A schema version column can help track future data structure changes safely.
 
 ---
 
