@@ -1,4 +1,4 @@
-# End-to-End Data Engineering
+# Market Data ETL Pipeline: End-to-End Data Engineering
 
 A fully containerised, production-ready data ecosystem consisting of a **Mock Market Data API**, a **PostgreSQL sink**, and a **Python ETL pipeline** — all orchestrated with Docker Compose.
 
